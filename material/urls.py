@@ -1,14 +1,14 @@
 from django.urls import path
-from rest_framework.routers import SimpleRouter
+from rest_framework.routers import DefaultRouter
 
-from material.views import CourseViewSet, LessonListApiView, LessonCreateApiView, LessonUpdateApiView, \
-    LessonRetrieveApiView, LessonDestroyApiView
+from material.views import (CourseViewSet, LessonListApiView, LessonCreateApiView, LessonUpdateApiView, \
+    LessonRetrieveApiView, LessonDestroyApiView)
 from material.apps import MaterialConfig
 
 app_name = MaterialConfig.name
 
-router = SimpleRouter()
-router.register("", CourseViewSet)
+router = DefaultRouter()
+router.register(r'course', CourseViewSet, basename='course')
 
 urlpatterns = [
     path("lesson/", LessonListApiView.as_view(), name="lesson_list"),
@@ -17,5 +17,4 @@ urlpatterns = [
     path("lesson/<int:pk>/delete/", LessonDestroyApiView.as_view(), name="lesson_delete"),
     path("lesson/<int:pk>/update/", LessonUpdateApiView.as_view(), name="lesson_update"),
 ]
-
 urlpatterns += router.urls

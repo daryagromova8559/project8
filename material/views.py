@@ -7,6 +7,7 @@ from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView,
 from material.models import Course, Lesson, Subscription
 from material.paginators import MaterialPagination
 from material.serializers import CourseSerializer, LessonSerializer, SubscriptionSerializer
+from material.tasks import send_email_task
 from users.permissions import IsModerator, IsOwner
 
 
@@ -14,11 +15,6 @@ class CourseViewSet(ModelViewSet):
     queryset = Course.objects.all()
     pagination_class = MaterialPagination
     serializer_class = CourseSerializer
-
-    def perform_create(self, serializer):
-        new_course = serializer.save()
-        new_course.owner = self.request.user
-        new_course.save()
 
     def get_permissions(self):
         if self.action == 'create':
@@ -28,6 +24,17 @@ class CourseViewSet(ModelViewSet):
         elif self.action == 'destroy':
             self.permission_classes = (IsOwner | ~IsModerator,)
         return super().get_permissions()
+
+    def perform_create(self, serializer):
+        new_course = serializer.save()
+        new_course.owner = self.request.user
+        new_course.save()
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        course_id = instance.id
+        send_email_task(course_id)
+        return instance
 
 
 class LessonCreateApiView(CreateAPIView):
@@ -81,8 +88,10 @@ class SubscriptionCreateApiView(CreateAPIView):
         if subs_item.exists():
             subs_item.delete()
             message = 'Подписка удалена'
+            send_email_task(course_id)
         else:
             subs_item.create(user=user, course=course_item)
             message = 'Подписка добавлена'
+            send_email_task(course_id)
         return Response({"message": message})
 
